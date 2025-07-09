@@ -34,12 +34,11 @@ def conta_parole():
 
     # Itera su ciascuna parola nella lista e aggiorna il conteggio
     for parola in parole:
-        # Assicurati che la parola non sia una stringa vuota (può capitare con spazi multipli nel testo)
         if parola:
             # Se la parola è già nel dizionario, incrementa il suo conteggio
             if parola in conteggio_parole:
                 conteggio_parole[parola] += 1
-            # Se la parola non è ancora nel dizionario, aggiungila con un conteggio di 1
+            # Se la parola non è ancora nel dizionario, viene aggiunta con +1
             else:
                 conteggio_parole[parola] = 1
 
