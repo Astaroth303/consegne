@@ -1,0 +1,33 @@
+def decifra_cesare(testo_cifrato):
+    """
+    Decifra un testo cifrato con il Cifrario di Cesare provando tutte le chiavi.
+    """
+    alfabeto = 'abcdefghijklmnopqrstuvwxyz'
+    
+    # Prova tutte le 25 possibili chiavi di spostamento
+    for chiave in range(1, 26):
+        testo_decifrato = ''
+        
+        for carattere in testo_cifrato:
+            # Gestisce le lettere minuscole
+            if carattere in alfabeto:
+                posizione_originale = alfabeto.find(carattere)
+                nuova_posizione = (posizione_originale - chiave) % 26
+                testo_decifrato += alfabeto[nuova_posizione]
+            # Gestisce le lettere maiuscole
+            elif carattere.lower() in alfabeto:
+                # Converte in minuscolo per trovare la posizione, poi riconverte in maiuscolo
+                posizione_originale = alfabeto.find(carattere.lower())
+                nuova_posizione = (posizione_originale - chiave) % 26
+                testo_decifrato += alfabeto[nuova_posizione].upper()
+            # Lascia invariati gli altri caratteri (spazi, punteggiatura, ecc.)
+            else:
+                testo_decifrato += carattere
+        
+        print(f'Chiave {chiave:2}: {testo_decifrato}')
+
+# Testo da decifrare da inserire dopo l'ugualeS
+testo_cifrato = "Aba vzoebtyvngr pur zr ar nppbetb"
+
+# Esegui la funzione
+decifra_cesare(testo_cifrato)
