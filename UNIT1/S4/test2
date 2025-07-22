@@ -6,7 +6,7 @@ from bs4 import BeautifulSoup
 
 # L'URL base di phpMyAdmin. Assicurati che sia quello corretto per la tua installazione.
 # Spesso la pagina di login è index.php all'interno della cartella phpMyAdmin.
-phpmyadmin_url = "http://192.168.60.101/phpMyAdmin/index.php"
+phpmyadmin_url = "http://192.168.80.101/phpMyAdmin"
 
 print("=== INTERAZIONE CON PHPMYADMIN TRAMITE BEAUTIFUL SOUP ===")
 print("URL di phpMyAdmin:", phpmyadmin_url)
