@@ -1,0 +1,123 @@
+# Programma per interagire con phpMyAdmin usando requests e Beautiful Soup
+# per analizzare il contenuto HTML e simulare interazioni.
+
+import requests
+from bs4 import BeautifulSoup
+
+# L'URL base di phpMyAdmin. Assicurati che sia quello corretto per la tua installazione.
+# Spesso la pagina di login è index.php all'interno della cartella phpMyAdmin.
+phpmyadmin_url = "http://192.168.80.101/phpMyAdmin"
+
+print("=== INTERAZIONE CON PHPMYADMIN TRAMITE BEAUTIFUL SOUP ===")
+print("URL di phpMyAdmin:", phpmyadmin_url)
+print()
+
+# Fase 1: Ottenere la pagina di login (GET request)
+print("1. Ottenimento della pagina di login...")
+try:
+    # Esegui una richiesta GET per ottenere il contenuto HTML della pagina di login.
+    # È fondamentale includere un timeout per evitare che la richiesta rimanga in sospeso indefinitamente.
+    response = requests.get(phpmyadmin_url, timeout=10)
+    response.raise_for_status()  # Solleva un'eccezione per errori HTTP (4xx o 5xx)
+
+    # Inizializza Beautiful Soup con il contenuto HTML della risposta.
+    # Questo crea un oggetto che ci permette di navigare e cercare nell'HTML.
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    print("   ✓ Pagina di login ottenuta con successo (Codice:", response.status_code, ")")
+    # print("Contenuto HTML (primi 500 caratteri):\n", response.text[:500]) # Per debug, puoi stampare parte dell'HTML
+
+    # Trovare il token CSRF (Cross-Site Request Forgery) se presente.
+    # phpMyAdmin usa un token nascosto per proteggersi da attacchi CSRF.
+    # È un campo input nascosto, spesso chiamato 'token' o con un nome simile.
+    token_input = soup.find('input', {'name': 'token'})
+    session_token = None
+    if token_input and 'value' in token_input.attrs:
+        session_token = token_input['value']
+        print(f"   Token CSRF trovato: {session_token}")
+    else:
+        print("   ✗ Attenzione: Token CSRF non trovato. Potrebbe non essere necessario o il campo ha un nome diverso.")
+
+    # Trovare l'URL a cui inviare la richiesta POST per il login.
+    # Questo è l'attributo 'action' del tag <form>.
+    login_form = soup.find('form', {'action': True}) # Cerca un form con un attributo 'action'
+    post_action_url = None
+    if login_form:
+        # Se l'action è un percorso relativo, lo combiniamo con l'URL base.
+        post_action_url = requests.compat.urljoin(phpmyadmin_url, login_form['action'])
+        print(f"   URL per il POST del login (action): {post_action_url}")
+    else:
+        print("   ✗ Attenzione: Form di login non trovato o non ha un attributo 'action'. Userò l'URL base per il POST.")
+        post_action_url = phpmyadmin_url # Fallback all'URL base
+
+except requests.exceptions.RequestException as e:
+    print("   ✗ Errore durante l'ottenimento della pagina di login:", str(e))
+    # Termina lo script se non riusciamo nemmeno a caricare la pagina iniziale.
+    exit()
+
+print()
+
+# Fase 2: Tentativo di login (POST request)
+# Iniziamo con credenziali errate per osservare il comportamento.
+print("2. Tentativo di login con credenziali errate...")
+# Ricorda: i nomi dei campi ('pma_username', 'pma_password') devono corrispondere a quelli del tuo phpMyAdmin.
+# Se non hai trovato il token CSRF o il form, potresti dover ispezionare manualmente il codice sorgente della pagina
+# (Ctrl+U nel browser) per trovare i nomi esatti dei campi input e dell'attributo 'action' del form.
+login_data = {
+    'pma_username': 'utente_inesistente',  # Username di prova
+    'pma_password': 'password_errata'     # Password di prova
+}
+
+# Aggiungi il token CSRF ai dati se è stato trovato
+if session_token:
+    login_data['token'] = session_token
+
+try:
+    # Esegui la richiesta POST con i dati del login.
+    # Permetti i reindirizzamenti (allow_redirects=True è il default) per seguire eventuali redirect post-login.
+    response_login = requests.post(post_action_url, data=login_data, timeout=10, allow_redirects=True)
+    response_login.raise_for_status()
+
+    # Dopo il tentativo di login, analizziamo la pagina di risposta.
+    # Un login fallito spesso ti riporta alla stessa pagina di login o a una pagina di errore con un messaggio.
+    # Un login riuscito ti reindirizza alla dashboard di phpMyAdmin.
+    soup_login = BeautifulSoup(response_login.text, 'html.parser')
+
+    print("   Codice risposta dopo il login:", response_login.status_code)
+    print("   URL finale dopo il login (se reindirizzato):", response_login.url)
+
+    # Cerca un messaggio di errore di login o un segno di successo.
+    # Questi selettori sono esempi e potrebbero dover essere adattati in base alla versione di phpMyAdmin.
+    if "Invalid username/password" in response_login.text or "Nome utente o password non validi" in response_login.text:
+        print("   ✓ Login fallito come previsto: Messaggio di errore di credenziali non valide trovato.")
+    elif "phpMyAdmin - " in response_login.text and "Benvenuto" in response_login.text: # Segno di dashboard
+        print("   ✗ Attenzione: Login sembrerebbe riuscito con credenziali errate! (Anomalia di sicurezza?)")
+    else:
+        print("   Comportamento del login non chiaro. Ispezionare la risposta manualmente.")
+        # print("Contenuto HTML dopo il login (primi 500 caratteri):\n", response_login.text[:500]) # Per debug
+
+except requests.exceptions.RequestException as e:
+    print("   ✗ Errore durante il tentativo di login:", str(e))
+
+print()
+
+# Fase 3: Simulazione di altri tentativi di interazione (esempio: ricerca di un link)
+print("3. Esempio: Cercare un link specifico sulla pagina (es. 'Database')...")
+try:
+    # Usiamo la soup dell'ultima risposta (che potrebbe essere la pagina di login o dopo il tentativo di login).
+    # Per una ricerca più affidabile, dovresti fare un'altra GET dopo un login riuscito.
+    # Questo è solo un esempio di come Beautiful Soup può trovare elementi.
+    link_to_databases = soup_login.find('a', string='Databases') # Cerca un tag <a> con testo "Databases"
+    if link_to_databases:
+        print(f"   ✓ Link 'Databases' trovato! URL: {link_to_databases['href']}")
+    else:
+        print("   ✗ Link 'Databases' non trovato sulla pagina attuale.")
+
+except Exception as e:
+    print("   ✗ Errore durante la ricerca del link:", str(e))
+
+print()
+print("=== FINE TEST BEAUTIFUL SOUP ===")
+print("Questo script mostra come puoi iniziare a interagire con il contenuto di una pagina web.")
+print("I prossimi passi includono: trovare i nomi esatti dei campi input,")
+print("gestire i cookie di sessione per mantenere il login, e analizzare le risposte per scoprire vulnerabilità.")
