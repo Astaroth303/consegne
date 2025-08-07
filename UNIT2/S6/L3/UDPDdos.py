@@ -193,7 +193,7 @@ def create_gui():
     global ip_entry, port_entry, size_entry, count_entry, selected_port_entry, port_output
 
     root = tk.Tk()
-    root.title("Simulatore UDP Flood")
+    root.title("UDP Dos by Marco Falchi")
 
     # Sezione Scansione Porte
     tk.Label(root, text="--- Scansione Porte UDP ---").grid(row=0, column=0, columnspan=2, pady=10)
